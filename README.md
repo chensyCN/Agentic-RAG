@@ -58,7 +58,7 @@ python main.py --mode vanilla --question "Your question here" --corpus path/to/c
 | **BaseRAG** | • Loading and processing document corpus<br>• Computing and caching document embeddings<br>• Basic retrieval functionality |
 | **VanillaRAG** | • Single retrieval step for relevant contexts<br>• Direct answer generation from retrieved contexts |
 | **AgenticRAG** | • Multiple retrieval rounds with iterative refinement<br>• Reflection on retrieved information to identify missing details<br>• Generation of focused sub-queries for additional retrieval<br>• Final answer generation from comprehensive context |
-| **Evaluation** | • Answer accuracy<br>• Retrieval metrics<br>• Performance efficiency<br>• String-based evaluation metrics |
+| **Evaluation** | • Answer accuracy (LLM evaluated)<br>• Retrieval metrics<br>• Performance efficiency<br>• String-based evaluation metrics |
 
 ## Example
 
