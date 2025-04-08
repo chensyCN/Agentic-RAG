@@ -15,7 +15,7 @@ class AgenticRAG(BaseRAG):
     It uses iterative reflection and retrieval to improve answer quality.
     """
     
-    def __init__(self, corpus_path: str = None, cache_dir: str = None):
+    def __init__(self, corpus_path: str = None, cache_dir: str = "./cache"):
         """Initialize the AgenticRAG system."""
         super().__init__(corpus_path, cache_dir)
         self.max_rounds = 3  # Default max rounds for iterative retrieval
