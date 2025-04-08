@@ -13,7 +13,7 @@ class VanillaRAG(BaseRAG):
     It inherits basic retrieval and embedding functionality from BaseRAG.
     """
     
-    def __init__(self, corpus_path: str = None, cache_dir: str = None):
+    def __init__(self, corpus_path: str = None, cache_dir: str = "./cache"):
         """Initialize the VanillaRAG system."""
         super().__init__(corpus_path, cache_dir)
     
