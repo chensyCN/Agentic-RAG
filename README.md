@@ -5,29 +5,7 @@ This repository contains a modularized implementation of an Agentic Retrieval-Au
 - [x] modularized implementation that is easy to hack;
 - [x] comprehensive evaluation framework for comparing traditional and agentic RAG approaches;
 
-## File Structure
-
-```
-Agentic-RAG/
-├── run.py                  # Script for running the application
-├── setup.py                # Setup script for package installation
-├── requirements.txt        # Package dependencies
-├── config/
-│   └── config.py           # Configuration settings
-├── src/
-│   ├── main.py             # Command-line interface and entry point
-│   ├── models/
-│   │   ├── base_rag.py     # Base RAG class with common functionality
-│   │   ├── vanilla_rag.py  # Implementation of traditional RAG approach
-│   │   └── agentic_rag.py  # Implementation of agentic RAG with iterative retrieval
-│   ├── evaluation/
-│   │   └── evaluation.py   # Evaluation utilities for comparing approaches
-│   └── utils/
-│       └── utils.py        # Shared utility functions
-├── dataset/                # Dataset storage
-├── cache/                  # Cache storage
-└── result/                 # Result storage
-```
+![AgenticRAG Architecture](agenticRAG.png){height=200px}
 
 
 ## Installation
@@ -96,3 +74,28 @@ answer, contexts, rounds = rag.answer_question("What is the capital of France?")
 print(f"Answer: {answer}")
 print(f"Retrieved in {rounds} rounds")
 ``` 
+
+
+## File Structure
+
+```
+Agentic-RAG/
+├── run.py                  # Script for running the application
+├── setup.py                # Setup script for package installation
+├── requirements.txt        # Package dependencies
+├── config/
+│   └── config.py           # Configuration settings
+├── src/
+│   ├── main.py             # Command-line interface and entry point
+│   ├── models/
+│   │   ├── base_rag.py     # Base RAG class with common functionality
+│   │   ├── vanilla_rag.py  # Implementation of traditional RAG approach
+│   │   └── agentic_rag.py  # Implementation of agentic RAG with iterative retrieval
+│   ├── evaluation/
+│   │   └── evaluation.py   # Evaluation utilities for comparing approaches
+│   └── utils/
+│       └── utils.py        # Shared utility functions
+├── dataset/                # Dataset storage
+├── cache/                  # Cache storage
+└── result/                 # Result storage
+```
