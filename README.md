@@ -1,29 +1,46 @@
 # Agentic RAG System
 
-This repository contains an implementation of an Agentic Retrieval-Augmented Generation (RAG) system that uses iterative refinement to improve answer quality compared to traditional RAG approaches.
+This repository contains a modularized implementation of an Agentic Retrieval-Augmented Generation (RAG) system. Offering
+- [x] minimal viable prototype of an Agentic RAG pipeline;
+- [x] modularized implementation that is easy to hack;
+- [x] comprehensive evaluation framework for comparing traditional and agentic RAG approaches;
 
 ## File Structure
 
-The codebase has been decoupled into the following modules:
+```
+Agentic-RAG/
+├── run.py                  # Script for running the application
+├── setup.py                # Setup script for package installation
+├── requirements.txt        # Package dependencies
+├── config/
+│   └── config.py           # Configuration settings
+├── src/
+│   ├── main.py             # Command-line interface and entry point
+│   ├── models/
+│   │   ├── base_rag.py     # Base RAG class with common functionality
+│   │   ├── vanilla_rag.py  # Implementation of traditional RAG approach
+│   │   └── agentic_rag.py  # Implementation of agentic RAG with iterative retrieval
+│   ├── evaluation/
+│   │   └── evaluation.py   # Evaluation utilities for comparing approaches
+│   └── utils/
+│       └── utils.py        # Shared utility functions
+├── dataset/                # Dataset storage
+├── cache/                  # Cache storage
+└── result/                 # Result storage
+```
 
-- `base_rag.py` - Base RAG class with common functionality like corpus loading and embedding
-- `vanilla_rag.py` - Implementation of traditional RAG approach
-- `agentic_rag.py` - Implementation of the agentic RAG approach with iterative retrieval
-- `evaluation.py` - Evaluation utilities for comparing both approaches
-- `utils.py` - Shared utility functions
-- `main.py` - Command-line interface and entry point
-- `config.py` - Configuration settings
-
-## Prerequisites
-
-- Python 3.8+
-- Required packages listed in requirements.txt
 
 ## Installation
 
+- Python 3.8+
 ```bash
 pip install -r requirements.txt
 ```
+
+## Configuration
+
+Edit `config.py` to set your OpenAI API key, model choices, and other configuration options.
+
 
 ## Usage
 
@@ -55,40 +72,14 @@ To run a single question through the VanillaRAG system:
 python main.py --mode vanilla --question "Your question here" --corpus path/to/corpus.json
 ```
 
-## Configuration
-
-Edit `config.py` to set your OpenAI API key, model choices, and other configuration options.
-
 ## Components
 
-### BaseRAG
-
-The base RAG class provides shared functionality:
-- Loading and processing document corpus
-- Computing and caching document embeddings
-- Basic retrieval functionality
-
-### VanillaRAG
-
-Traditional RAG approach:
-- Single retrieval step for relevant contexts
-- Direct answer generation from retrieved contexts
-
-### AgenticRAG
-
-Enhanced RAG with agentic capabilities:
-- Multiple retrieval rounds with iterative refinement
-- Reflection on retrieved information to identify missing details
-- Generation of focused sub-queries for additional retrieval
-- Final answer generation from comprehensive context
-
-### Evaluation
-
-The evaluation module compares both approaches on:
-- Answer accuracy
-- Retrieval metrics
-- Performance efficiency
-- String-based evaluation metrics
+| Component | Features/Description |
+|-----------|---------------------|
+| **BaseRAG** | • Loading and processing document corpus<br>• Computing and caching document embeddings<br>• Basic retrieval functionality |
+| **VanillaRAG** | • Single retrieval step for relevant contexts<br>• Direct answer generation from retrieved contexts |
+| **AgenticRAG** | • Multiple retrieval rounds with iterative refinement<br>• Reflection on retrieved information to identify missing details<br>• Generation of focused sub-queries for additional retrieval<br>• Final answer generation from comprehensive context |
+| **Evaluation** | • Answer accuracy<br>• Retrieval metrics<br>• Performance efficiency<br>• String-based evaluation metrics |
 
 ## Example
 
