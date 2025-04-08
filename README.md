@@ -1,9 +1,12 @@
-# Agentic RAG System
+# Agentic RAG
 
-This repository contains a modularized implementation of an Agentic Retrieval-Augmented Generation (RAG) system. Offering
-- [x] minimal viable prototype of an Agentic RAG pipeline;
-- [x] modularized implementation that is easy to hack;
-- [x] comprehensive evaluation framework for comparing traditional and agentic RAG approaches;
+A modular and extensible implementation of Agentic Retrieval-Augmented Generation (RAG) - the next evolution in RAG systems that employs an iterative, agent-based approach to information retrieval and generation.
+
+## Key Features
+
+- **Research Prototype** - A minimal viable implementation for experimentation and academic exploration
+- **Modular Architecture** - Clean, decoupled codebase designed for easy customization and extension
+- **Comparative Evaluation Framework** - Comprehensive tools to benchmark agentic vs. traditional RAG approaches
 
 ![AgenticRAG Architecture](agenticRAG.png)
 
