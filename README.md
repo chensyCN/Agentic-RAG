@@ -5,22 +5,20 @@ This repository contains a modularized implementation of an Agentic Retrieval-Au
 - [x] modularized implementation that is easy to hack;
 - [x] comprehensive evaluation framework for comparing traditional and agentic RAG approaches;
 
-![AgenticRAG Architecture](agenticRAG.png){height=200px}
+![AgenticRAG Architecture](agenticRAG.png)
 
 
-## Installation
+## Installation and Configuration
 
-- Python 3.8+
+- Python 3.8+ required
+- Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
-
-## Configuration
-
-Edit `config.py` to set your OpenAI API key, model choices, and other configuration options.
+- Edit `config.py` to set your OpenAI API key, model choices, and other configuration options
 
 
-## Usage
+## Quick start
 
 ### Running Evaluation
 
