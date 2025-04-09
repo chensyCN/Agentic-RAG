@@ -6,7 +6,7 @@ A modular and extensible implementation of Agentic Retrieval-Augmented Generatio
 
 - **Research Prototype** - A minimal viable implementation for experimentation and academic exploration
 - **Modular Architecture** - Clean, decoupled codebase designed for easy customization and extension
-- **Comparative Evaluation Framework** - Comprehensive tools to benchmark agentic vs. traditional RAG approaches
+- **Comparative Evaluation** - Comprehensive evaluation metrics to benchmark RAG approaches
 
 ![AgenticRAG Architecture](agenticRAG.png)
 
