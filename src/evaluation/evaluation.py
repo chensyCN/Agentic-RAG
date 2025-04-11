@@ -22,11 +22,19 @@ logger = logging.getLogger(__name__)
 class RAGEvaluator:
     """Evaluator for comparing AgenticRAG and VanillaRAG approaches."""
     
-    def __init__(self, corpus_path: str, max_rounds: int = 3, top_k: int = 5):
-        """Initialize the evaluator with corpus path and parameters."""
+    def __init__(self, corpus_path: str, max_rounds: int = 3, top_k: int = 5, eval_top_ks: List[int] = [5, 10]):
+        """Initialize the evaluator with corpus path and parameters.
+        
+        Args:
+            corpus_path: Path to the corpus file
+            max_rounds: Maximum number of rounds for agentic RAG
+            top_k: Number of contexts to retrieve
+            eval_top_ks: List of k values for top-k accuracy evaluation
+        """
         self.corpus_path = corpus_path
         self.max_rounds = max_rounds
         self.top_k = top_k
+        self.eval_top_ks = sorted(eval_top_ks)  # Sort to ensure consistent processing
         
         # Create result directory if it doesn't exist
         os.makedirs(RESULT_DIR, exist_ok=True)
@@ -79,8 +87,9 @@ class RAGEvaluator:
         """Calculate retrieval-based metrics."""
         total = len(answers)
         found_in_context = 0
-        answer_in_top1 = 0
-        answer_in_top3 = 0
+        
+        # Initialize answer_in_top_k counters for each k in eval_top_ks
+        answer_in_top_k = {k: 0 for k in self.eval_top_ks}
         
         for contexts, answer in zip(retrieved_contexts, answers):
             normalized_answer = normalize_answer(answer)
@@ -89,18 +98,23 @@ class RAGEvaluator:
             for i, context in enumerate(contexts):
                 if normalized_answer in normalize_answer(context):
                     found_in_context += 1
-                    if i == 0:  # Top-1
-                        answer_in_top1 += 1
-                    if i < 3:   # Top-3
-                        answer_in_top3 += 1
+                    # Update counters for each k value
+                    for k in self.eval_top_ks:
+                        if i < k:
+                            answer_in_top_k[k] += 1
                     break
         
-        return {
+        # Prepare result dictionary
+        result = {
             "answer_found_in_context": found_in_context / total,
-            "answer_in_top1": answer_in_top1 / total,
-            "answer_in_top3": answer_in_top3 / total,
             "total_questions": total
         }
+        
+        # Add top-k metrics to result
+        for k in self.eval_top_ks:
+            result[f"answer_in_top{k}"] = answer_in_top_k[k] / total
+            
+        return result
         
     def run_evaluation(self, eval_data: List[Dict], output_file: str = "agent_vs_vanilla_comparison.json"):
         """Run evaluation on the given evaluation data."""
@@ -108,30 +122,34 @@ class RAGEvaluator:
         
         # Evaluation metrics
         total_questions = len(eval_data)
+        
+        # Initialize metrics dictionaries with dynamic top-k keys
         vanilla_metrics = {
             "total_time": 0,
             "answer_coverage": 0,
-            "top1_hits": 0,
-            "top3_hits": 0,
-            "top5_hits": 0,
             "answer_accuracy": 0,
             "string_accuracy": 0,
             "string_precision": 0,
             "string_recall": 0
         }
         
+        # Add top-k hits for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            vanilla_metrics[f"top{k}_hits"] = 0
+        
         agent_metrics = {
             "total_time": 0,
             "answer_coverage": 0,
-            "top1_hits": 0,
-            "top3_hits": 0,
-            "top5_hits": 0,
             "total_rounds": 0,
             "answer_accuracy": 0,
             "string_accuracy": 0,
             "string_precision": 0,
             "string_recall": 0
         }
+        
+        # Add top-k hits for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            agent_metrics[f"top{k}_hits"] = 0
         
         for item in tqdm(eval_data, desc="Evaluating"):
             question = item['question']
@@ -161,12 +179,10 @@ class RAGEvaluator:
             for i, ctx in enumerate(comparison_result["vanilla"]["contexts"]):
                 if normalized_gold in normalize_answer(ctx):
                     vanilla_metrics["answer_coverage"] += 1
-                    if i == 0:
-                        vanilla_metrics["top1_hits"] += 1
-                    if i < 3:
-                        vanilla_metrics["top3_hits"] += 1
-                    if i < 5:
-                        vanilla_metrics["top5_hits"] += 1
+                    # Update counters for each k value
+                    for k in self.eval_top_ks:
+                        if i < k:
+                            vanilla_metrics[f"top{k}_hits"] += 1
                     break
             
             # Update agent metrics
@@ -186,12 +202,10 @@ class RAGEvaluator:
             for i, ctx in enumerate(comparison_result["agent"]["contexts"]):
                 if normalized_gold in normalize_answer(ctx):
                     agent_metrics["answer_coverage"] += 1
-                    if i == 0:
-                        agent_metrics["top1_hits"] += 1
-                    if i < 3:
-                        agent_metrics["top3_hits"] += 1
-                    if i < 5:
-                        agent_metrics["top5_hits"] += 1
+                    # Update counters for each k value
+                    for k in self.eval_top_ks:
+                        if i < k:
+                            agent_metrics[f"top{k}_hits"] += 1
                     break
             
             # Evaluate answer using LLM
@@ -201,30 +215,38 @@ class RAGEvaluator:
                 vanilla_metrics["answer_accuracy"] += 1
         
         # Calculate average metrics
-        vanilla_metrics.update({
+        avg_vanilla_metrics = {
             "avg_time": vanilla_metrics["total_time"] / total_questions,
             "answer_coverage": vanilla_metrics["answer_coverage"] / total_questions * 100,
-            "top1_accuracy": vanilla_metrics["top1_hits"] / total_questions * 100,
-            "top3_accuracy": vanilla_metrics["top3_hits"] / total_questions * 100,
-            "top5_accuracy": vanilla_metrics["top5_hits"] / total_questions * 100,
             "answer_accuracy": vanilla_metrics["answer_accuracy"] / total_questions * 100,
             "string_accuracy": vanilla_metrics["string_accuracy"] / total_questions * 100,
             "string_precision": vanilla_metrics["string_precision"] / total_questions * 100,
             "string_recall": vanilla_metrics["string_recall"] / total_questions * 100
-        })
+        }
         
-        agent_metrics.update({
+        # Add top-k accuracy for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            avg_vanilla_metrics[f"top{k}_accuracy"] = vanilla_metrics[f"top{k}_hits"] / total_questions * 100
+        
+        # Update vanilla metrics with averages
+        vanilla_metrics.update(avg_vanilla_metrics)
+        
+        avg_agent_metrics = {
             "avg_time": agent_metrics["total_time"] / total_questions,
             "avg_rounds": agent_metrics["total_rounds"] / total_questions,
             "answer_coverage": agent_metrics["answer_coverage"] / total_questions * 100,
-            "top1_accuracy": agent_metrics["top1_hits"] / total_questions * 100,
-            "top3_accuracy": agent_metrics["top3_hits"] / total_questions * 100,
-            "top5_accuracy": agent_metrics["top5_hits"] / total_questions * 100,
             "answer_accuracy": agent_metrics["answer_accuracy"] / total_questions * 100,
             "string_accuracy": agent_metrics["string_accuracy"] / total_questions * 100,
             "string_precision": agent_metrics["string_precision"] / total_questions * 100,
             "string_recall": agent_metrics["string_recall"] / total_questions * 100
-        })
+        }
+        
+        # Add top-k accuracy for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            avg_agent_metrics[f"top{k}_accuracy"] = agent_metrics[f"top{k}_hits"] / total_questions * 100
+        
+        # Update agent metrics with averages
+        agent_metrics.update(avg_agent_metrics)
         
         # Prepare evaluation summary
         evaluation_summary = {
@@ -244,9 +266,11 @@ class RAGEvaluator:
         logger.info("\nVanilla Retrieval Metrics:")
         logger.info(f"Average Time: {vanilla_metrics['avg_time']:.3f}s")
         logger.info(f"Answer Coverage: {vanilla_metrics['answer_coverage']:.2f}%")
-        logger.info(f"Top-1 Accuracy: {vanilla_metrics['top1_accuracy']:.2f}%")
-        logger.info(f"Top-3 Accuracy: {vanilla_metrics['top3_accuracy']:.2f}%")
-        logger.info(f"Top-5 Accuracy: {vanilla_metrics['top5_accuracy']:.2f}%")
+        
+        # Log top-k accuracy for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            logger.info(f"Top-{k} Accuracy: {vanilla_metrics[f'top{k}_accuracy']:.2f}%")
+            
         logger.info(f"Answer Accuracy (LLM Evaluated): {vanilla_metrics['answer_accuracy']:.2f}%")
         logger.info(f"String-based Metrics:")
         logger.info(f"  - Accuracy: {vanilla_metrics['string_accuracy']:.2f}%")
@@ -257,9 +281,11 @@ class RAGEvaluator:
         logger.info(f"Average Time: {agent_metrics['avg_time']:.3f}s")
         logger.info(f"Average Rounds: {agent_metrics['avg_rounds']:.2f}")
         logger.info(f"Answer Coverage: {agent_metrics['answer_coverage']:.2f}%")
-        logger.info(f"Top-1 Accuracy: {agent_metrics['top1_accuracy']:.2f}%")
-        logger.info(f"Top-3 Accuracy: {agent_metrics['top3_accuracy']:.2f}%")
-        logger.info(f"Top-5 Accuracy: {agent_metrics['top5_accuracy']:.2f}%")
+        
+        # Log top-k accuracy for each k in eval_top_ks
+        for k in self.eval_top_ks:
+            logger.info(f"Top-{k} Accuracy: {agent_metrics[f'top{k}_accuracy']:.2f}%")
+            
         logger.info(f"Answer Accuracy (LLM Evaluated): {agent_metrics['answer_accuracy']:.2f}%")
         logger.info(f"String-based Metrics:")
         logger.info(f"  - Accuracy: {agent_metrics['string_accuracy']:.2f}%")

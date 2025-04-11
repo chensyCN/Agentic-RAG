@@ -29,6 +29,8 @@ def parse_arguments():
                       help='Maximum number of agent rounds')
     parser.add_argument('--top-k', type=int, default=5, 
                       help='Number of top contexts to retrieve')
+    parser.add_argument('--eval-top-ks', type=int, nargs='+', default=[5, 10],
+                      help='List of k values for top-k accuracy evaluation (default: [5, 10])')
     
     # Evaluation options
     parser.add_argument('--output', type=str, default='agent_vs_vanilla_comparison.json',
@@ -100,6 +102,7 @@ def main():
     # For evaluation mode
     logger.info("Starting AgenticRAG vs VanillaRAG evaluation")
     logger.info(f"Max rounds: {args.max_rounds}, Top-k: {args.top_k}")
+    logger.info(f"Evaluating top-k accuracy for k values: {args.eval_top_ks}")
     
     # Load evaluation data
     eval_data = load_evaluation_data(args.dataset, args.limit)
@@ -113,7 +116,8 @@ def main():
     evaluator = RAGEvaluator(
         corpus_path=args.corpus,
         max_rounds=args.max_rounds,
-        top_k=args.top_k
+        top_k=args.top_k,
+        eval_top_ks=args.eval_top_ks
     )
     
     # Run evaluation
