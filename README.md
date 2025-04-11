@@ -37,6 +37,17 @@ Options:
 - `--limit`: Number of questions to evaluate (default: 20)
 - `--output`: Output file name for results (default: agent_vs_vanilla_comparison.json)
 
+### Using the Scripts
+
+For convenience, you can use the provided scripts to run evaluations on all available datasets:
+
+```bash
+# Run evaluations on all datasets
+./scripts/run.sh
+```
+
+See the [scripts/README.md](scripts/README.md) for more details on available scripts.
+
 ### Running a Single Query
 
 To run a single question through the AgenticRAG system:
