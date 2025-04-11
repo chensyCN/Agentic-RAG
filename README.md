@@ -18,7 +18,15 @@ A modular and extensible implementation of Agentic Retrieval-Augmented Generatio
 ```bash
 pip install -r requirements.txt
 ```
-- Edit `config.py` to set your OpenAI API key, model choices, and other configuration options
+- Create a `.env` file in the root directory based on `.env.example`:
+```bash
+cp .env.example .env
+```
+- Edit `.env` file to set your OpenAI API key:
+```
+OPENAI_API_KEY=your_actual_api_key_here
+```
+- Additional configuration options can be found in `config/config.py`
 
 
 ## Quick start

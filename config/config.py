@@ -1,9 +1,14 @@
 """
 Configuration file for API keys and other settings.
 """
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 # OpenAI API Configuration
-OPENAI_API_KEY = None # please specify your own API key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Get API key from environment variable
 
 # API Rate Limiting Configuration
 CALLS_PER_MINUTE = 20
