@@ -2,3 +2,9 @@ __pycache__/
 *.py[cod]
 config/__pycache__/
 result/
+# Environment variables
+.env
+.env.*
+
+# Sensitive configuration backups
+*config_backup*

@@ -1,9 +1,10 @@
 """
 Configuration file for API keys and other settings.
 """
+import os
 
 # OpenAI API Configuration
-OPENAI_API_KEY = None
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 # API Rate Limiting Configuration
 CALLS_PER_MINUTE = 20
