@@ -3,7 +3,7 @@ Configuration file for API keys and other settings.
 """
 
 # OpenAI API Configuration
-***REMOVED***
+OPENAI_API_KEY = None
 
 # API Rate Limiting Configuration
 CALLS_PER_MINUTE = 20
