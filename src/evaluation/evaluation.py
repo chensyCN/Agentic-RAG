@@ -13,24 +13,35 @@ from src.utils.utils import (
 )
 from src.models.vanilla_rag import VanillaRAG
 from src.models.agentic_rag import AgenticRAG
+from src.models.light_agentic_rag import LightAgenticRAG
 from config.config import RESULT_DIR
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Dictionary of available RAG models
+RAG_MODELS = {
+    "vanilla": VanillaRAG,
+    "agentic": AgenticRAG,
+    "light": LightAgenticRAG
+}
+
 class RAGEvaluator:
-    """Evaluator for comparing AgenticRAG and VanillaRAG approaches."""
+    """Evaluator for RAG models."""
     
-    def __init__(self, corpus_path: str, max_rounds: int = 3, top_k: int = 5, eval_top_ks: List[int] = [5, 10]):
+    def __init__(self, model_name: str, corpus_path: str, max_rounds: int = 3, top_k: int = 5, 
+                eval_top_ks: List[int] = [5, 10]):
         """Initialize the evaluator with corpus path and parameters.
         
         Args:
+            model_name: Name of the RAG model to evaluate
             corpus_path: Path to the corpus file
             max_rounds: Maximum number of rounds for agentic RAG
             top_k: Number of contexts to retrieve
             eval_top_ks: List of k values for top-k accuracy evaluation
         """
+        self.model_name = model_name
         self.corpus_path = corpus_path
         self.max_rounds = max_rounds
         self.top_k = top_k
@@ -39,49 +50,64 @@ class RAGEvaluator:
         # Create result directory if it doesn't exist
         os.makedirs(RESULT_DIR, exist_ok=True)
         
-        # Initialize both RAG systems
-        self.agentic_rag = AgenticRAG(corpus_path)
-        self.agentic_rag.set_max_rounds(max_rounds)
-        self.agentic_rag.set_top_k(top_k)
+        # Initialize the RAG model
+        self._initialize_model()
+    
+    def _initialize_model(self):
+        """Initialize the specified RAG model."""
+        if self.model_name not in RAG_MODELS:
+            raise ValueError(f"Unknown RAG model: {self.model_name}")
         
-        self.vanilla_rag = VanillaRAG(corpus_path)
-        self.vanilla_rag.set_top_k(top_k)
+        # Create model instance
+        model_class = RAG_MODELS[self.model_name]
+        self.model = model_class(self.corpus_path)
         
-    def compare_approaches(self, question: str, gold_answer: str) -> Dict:
-        """Compare agent-based and vanilla retrieval approaches for a single question."""
-        # Vanilla RAG
+        # Configure model
+        self.model.set_top_k(self.top_k)
+        
+        # Set max rounds for agentic models
+        if hasattr(self.model, 'set_max_rounds'):
+            self.model.set_max_rounds(self.max_rounds)
+        
+        logger.info(f"Initialized {self.model_name} model")
+    
+    def evaluate_question(self, question: str, gold_answer: str) -> Dict:
+        """Evaluate the model on a single question."""
+        # Run the model on the question
         start_time = time.time()
-        vanilla_answer, vanilla_contexts = self.vanilla_rag.answer_question(question)
-        vanilla_time = time.time() - start_time
         
-        # Agent RAG
-        start_time = time.time()
-        agent_answer, agent_contexts, rounds = self.agentic_rag.answer_question(question)
-        agent_time = time.time() - start_time
-        
-        # Evaluate vanilla answer with LLM
-        vanilla_is_correct = evaluate_with_llm(vanilla_answer, gold_answer)
-        
-        # Evaluate agent answer with LLM
-        agent_is_correct = evaluate_with_llm(agent_answer, gold_answer)
-        
-        return {
-            "question": question,
-            "gold_answer": gold_answer,
-            "vanilla": {
-                "answer": vanilla_answer,
-                "contexts": vanilla_contexts,
-                "time": vanilla_time,
-                "is_correct": vanilla_is_correct
-            },
-            "agent": {
-                "answer": agent_answer,
-                "contexts": agent_contexts,
-                "time": agent_time,
+        # Handle different return signatures
+        if self.model_name in ["agentic", "light"]:
+            answer, contexts, rounds = self.model.answer_question(question)
+            elapsed_time = time.time() - start_time
+            
+            # Evaluate answer with LLM
+            is_correct = evaluate_with_llm(answer, gold_answer)
+            
+            return {
+                "question": question,
+                "gold_answer": gold_answer,
+                "answer": answer,
+                "contexts": contexts,
+                "time": elapsed_time,
                 "rounds": rounds,
-                "is_correct": agent_is_correct
+                "is_correct": is_correct
             }
-        }
+        else:
+            answer, contexts = self.model.answer_question(question)
+            elapsed_time = time.time() - start_time
+            
+            # Evaluate answer with LLM
+            is_correct = evaluate_with_llm(answer, gold_answer)
+            
+            return {
+                "question": question,
+                "gold_answer": gold_answer,
+                "answer": answer,
+                "contexts": contexts,
+                "time": elapsed_time,
+                "is_correct": is_correct
+            }
         
     def calculate_retrieval_metrics(self, retrieved_contexts: List[List[str]], answers: List[str]) -> Dict[str, float]:
         """Calculate retrieval-based metrics."""
@@ -115,16 +141,16 @@ class RAGEvaluator:
             result[f"answer_in_top{k}"] = answer_in_top_k[k] / total
             
         return result
-        
-    def run_evaluation(self, eval_data: List[Dict], output_file: str = "agent_vs_vanilla_comparison.json"):
-        """Run evaluation on the given evaluation data."""
+    
+    def run_single_model_evaluation(self, eval_data: List[Dict], output_file: str = "evaluation_results.json"):
+        """Run evaluation of a single model on the given evaluation data."""
         results = []
         
         # Evaluation metrics
         total_questions = len(eval_data)
         
-        # Initialize metrics dictionaries with dynamic top-k keys
-        vanilla_metrics = {
+        # Initialize metrics dictionary with dynamic top-k keys
+        metrics = {
             "total_time": 0,
             "answer_coverage": 0,
             "answer_accuracy": 0,
@@ -135,163 +161,141 @@ class RAGEvaluator:
         
         # Add top-k hits for each k in eval_top_ks
         for k in self.eval_top_ks:
-            vanilla_metrics[f"top{k}_hits"] = 0
+            metrics[f"top{k}_hits"] = 0
         
-        agent_metrics = {
-            "total_time": 0,
-            "answer_coverage": 0,
-            "total_rounds": 0,
-            "answer_accuracy": 0,
-            "string_accuracy": 0,
-            "string_precision": 0,
-            "string_recall": 0
-        }
+        # Add rounds tracking for agentic models
+        if self.model_name in ["agentic", "light"]:
+            metrics["total_rounds"] = 0
         
-        # Add top-k hits for each k in eval_top_ks
-        for k in self.eval_top_ks:
-            agent_metrics[f"top{k}_hits"] = 0
-        
-        for item in tqdm(eval_data, desc="Evaluating"):
+        for item in tqdm(eval_data, desc=f"Evaluating {self.model_name}"):
             question = item['question']
             gold_answer = item['answer']
             
-            # Compare agent-based and vanilla retrieval
-            comparison_result = self.compare_approaches(
+            # Evaluate the model on this question
+            result = self.evaluate_question(
                 question=question,
                 gold_answer=gold_answer
             )
-            results.append(comparison_result)
+            results.append(result)
             
-            # Update vanilla metrics
-            vanilla_metrics["total_time"] += comparison_result["vanilla"]["time"]
+            # Update metrics
+            metrics["total_time"] += result["time"]
             normalized_gold = normalize_answer(gold_answer)
             
-            # String-based evaluation for vanilla
-            vanilla_string_metrics = string_based_evaluation(
-                comparison_result["vanilla"]["answer"], 
+            # String-based evaluation
+            string_metrics = string_based_evaluation(
+                result["answer"], 
                 gold_answer
             )
-            vanilla_metrics["string_accuracy"] += vanilla_string_metrics["accuracy"]
-            vanilla_metrics["string_precision"] += vanilla_string_metrics["precision"]
-            vanilla_metrics["string_recall"] += vanilla_string_metrics["recall"]
+            metrics["string_accuracy"] += string_metrics["accuracy"]
+            metrics["string_precision"] += string_metrics["precision"]
+            metrics["string_recall"] += string_metrics["recall"]
             
-            # Check vanilla retrieval coverage
-            for i, ctx in enumerate(comparison_result["vanilla"]["contexts"]):
+            # Check retrieval coverage
+            for i, ctx in enumerate(result["contexts"]):
                 if normalized_gold in normalize_answer(ctx):
-                    vanilla_metrics["answer_coverage"] += 1
+                    metrics["answer_coverage"] += 1
                     # Update counters for each k value
                     for k in self.eval_top_ks:
                         if i < k:
-                            vanilla_metrics[f"top{k}_hits"] += 1
+                            metrics[f"top{k}_hits"] += 1
                     break
             
-            # Update agent metrics
-            agent_metrics["total_time"] += comparison_result["agent"]["time"]
-            agent_metrics["total_rounds"] += comparison_result["agent"]["rounds"]
-            
-            # String-based evaluation for agent
-            agent_string_metrics = string_based_evaluation(
-                comparison_result["agent"]["answer"], 
-                gold_answer
-            )
-            agent_metrics["string_accuracy"] += agent_string_metrics["accuracy"]
-            agent_metrics["string_precision"] += agent_string_metrics["precision"]
-            agent_metrics["string_recall"] += agent_string_metrics["recall"]
-            
-            # Check agent retrieval coverage
-            for i, ctx in enumerate(comparison_result["agent"]["contexts"]):
-                if normalized_gold in normalize_answer(ctx):
-                    agent_metrics["answer_coverage"] += 1
-                    # Update counters for each k value
-                    for k in self.eval_top_ks:
-                        if i < k:
-                            agent_metrics[f"top{k}_hits"] += 1
-                    break
+            # Update rounds for agentic models
+            if self.model_name in ["agentic", "light"] and "rounds" in result:
+                metrics["total_rounds"] += result["rounds"]
             
             # Evaluate answer using LLM
-            if comparison_result["agent"]["is_correct"]:
-                agent_metrics["answer_accuracy"] += 1
-            if comparison_result["vanilla"]["is_correct"]:
-                vanilla_metrics["answer_accuracy"] += 1
+            if result["is_correct"]:
+                metrics["answer_accuracy"] += 1
         
         # Calculate average metrics
-        avg_vanilla_metrics = {
-            "avg_time": vanilla_metrics["total_time"] / total_questions,
-            "answer_coverage": vanilla_metrics["answer_coverage"] / total_questions * 100,
-            "answer_accuracy": vanilla_metrics["answer_accuracy"] / total_questions * 100,
-            "string_accuracy": vanilla_metrics["string_accuracy"] / total_questions * 100,
-            "string_precision": vanilla_metrics["string_precision"] / total_questions * 100,
-            "string_recall": vanilla_metrics["string_recall"] / total_questions * 100
+        avg_metrics = {
+            "avg_time": metrics["total_time"] / total_questions,
+            "answer_coverage": metrics["answer_coverage"] / total_questions * 100,
+            "answer_accuracy": metrics["answer_accuracy"] / total_questions * 100,
+            "string_accuracy": metrics["string_accuracy"] / total_questions * 100,
+            "string_precision": metrics["string_precision"] / total_questions * 100,
+            "string_recall": metrics["string_recall"] / total_questions * 100
         }
         
-        # Add top-k accuracy for each k in eval_top_ks
+        # Add top-k coverage (renamed from accuracy) for each k in eval_top_ks
         for k in self.eval_top_ks:
-            avg_vanilla_metrics[f"top{k}_accuracy"] = vanilla_metrics[f"top{k}_hits"] / total_questions * 100
+            avg_metrics[f"top{k}_coverage"] = metrics[f"top{k}_hits"] / total_questions * 100
         
-        # Update vanilla metrics with averages
-        vanilla_metrics.update(avg_vanilla_metrics)
+        # Add average rounds for agentic models
+        if self.model_name in ["agentic", "light"]:
+            avg_metrics["avg_rounds"] = metrics["total_rounds"] / total_questions
         
-        avg_agent_metrics = {
-            "avg_time": agent_metrics["total_time"] / total_questions,
-            "avg_rounds": agent_metrics["total_rounds"] / total_questions,
-            "answer_coverage": agent_metrics["answer_coverage"] / total_questions * 100,
-            "answer_accuracy": agent_metrics["answer_accuracy"] / total_questions * 100,
-            "string_accuracy": agent_metrics["string_accuracy"] / total_questions * 100,
-            "string_precision": agent_metrics["string_precision"] / total_questions * 100,
-            "string_recall": agent_metrics["string_recall"] / total_questions * 100
+        # Organize metrics by category
+        organized_metrics = {
+            "performance": {
+                "avg_time": avg_metrics["avg_time"]
+            },
+            "string_based": {
+                "accuracy": avg_metrics["string_accuracy"],
+                "precision": avg_metrics["string_precision"],
+                "recall": avg_metrics["string_recall"]
+            },
+            "llm_evaluated": {
+                "answer_accuracy": avg_metrics["answer_accuracy"]
+            },
+            "retrieval": {
+                "answer_coverage": avg_metrics["answer_coverage"]
+            }
         }
         
-        # Add top-k accuracy for each k in eval_top_ks
+        # Add rounds for agentic models
+        if self.model_name in ["agentic", "light"]:
+            organized_metrics["performance"]["avg_rounds"] = avg_metrics["avg_rounds"]
+        
+        # Add top-k coverage metrics
         for k in self.eval_top_ks:
-            avg_agent_metrics[f"top{k}_accuracy"] = agent_metrics[f"top{k}_hits"] / total_questions * 100
+            organized_metrics["retrieval"][f"top{k}_coverage"] = avg_metrics[f"top{k}_coverage"]
         
-        # Update agent metrics with averages
-        agent_metrics.update(avg_agent_metrics)
+        # Add raw metrics for backwards compatibility
+        organized_metrics["raw"] = metrics
         
-        # Prepare evaluation summary
+        # Prepare final evaluation summary
         evaluation_summary = {
-            "total_questions": total_questions,
-            "vanilla_retrieval": vanilla_metrics,
-            "agent_retrieval": agent_metrics,
-            "detailed_results": results
+            "model": self.model_name,
+            "metrics": organized_metrics,
+            "results": results
         }
         
-        # Save detailed results and evaluation summary
-        output_path = os.path.join(RESULT_DIR, output_file)
-        with open(output_path, 'w') as f:
-            json.dump(evaluation_summary, f, indent=2)
+        # Save results
+        save_results(
+            results=evaluation_summary,
+            output_file=output_file,
+            results_dir=RESULT_DIR
+        )
         
-        # Log evaluation summary
-        logger.info("\nEvaluation Summary:")
-        logger.info("\nVanilla Retrieval Metrics:")
-        logger.info(f"Average Time: {vanilla_metrics['avg_time']:.3f}s")
-        logger.info(f"Answer Coverage: {vanilla_metrics['answer_coverage']:.2f}%")
+        # Log results in three sections
+        logger.info(f"\nEvaluation Summary for {self.model_name}:")
         
-        # Log top-k accuracy for each k in eval_top_ks
+        # Performance metrics
+        if self.model_name in ["agentic", "light"]:
+            logger.info(f"Average time per question: {avg_metrics['avg_time']:.2f} seconds")
+            logger.info(f"Average rounds per question: {avg_metrics['avg_rounds']:.2f}")
+        else:
+            logger.info(f"Average time per question: {avg_metrics['avg_time']:.2f} seconds")
+        
+        # 1. String-based metrics
+        logger.info("\n1. String-based Metrics:")
+        logger.info(f"  • Accuracy: {avg_metrics['string_accuracy']:.2f}%")
+        logger.info(f"  • Precision: {avg_metrics['string_precision']:.2f}%")
+        logger.info(f"  • Recall: {avg_metrics['string_recall']:.2f}%")
+        
+        # 2. LLM evaluated metrics
+        logger.info("\n2. LLM Evaluated Metrics:")
+        logger.info(f"  • Answer Accuracy: {avg_metrics['answer_accuracy']:.2f}%")
+        
+        # 3. Retrieval performance
+        logger.info("\n3. Retrieval Performance:")
+        logger.info(f"  • Answer Coverage: {avg_metrics['answer_coverage']:.2f}%")
+        
+        # Log top-k coverage metrics
         for k in self.eval_top_ks:
-            logger.info(f"Top-{k} Accuracy: {vanilla_metrics[f'top{k}_accuracy']:.2f}%")
-            
-        logger.info(f"Answer Accuracy (LLM Evaluated): {vanilla_metrics['answer_accuracy']:.2f}%")
-        logger.info(f"String-based Metrics:")
-        logger.info(f"  - Accuracy: {vanilla_metrics['string_accuracy']:.2f}%")
-        logger.info(f"  - Precision: {vanilla_metrics['string_precision']:.2f}%")
-        logger.info(f"  - Recall: {vanilla_metrics['string_recall']:.2f}%")
-        
-        logger.info("\nAgent Retrieval Metrics:")
-        logger.info(f"Average Time: {agent_metrics['avg_time']:.3f}s")
-        logger.info(f"Average Rounds: {agent_metrics['avg_rounds']:.2f}")
-        logger.info(f"Answer Coverage: {agent_metrics['answer_coverage']:.2f}%")
-        
-        # Log top-k accuracy for each k in eval_top_ks
-        for k in self.eval_top_ks:
-            logger.info(f"Top-{k} Accuracy: {agent_metrics[f'top{k}_accuracy']:.2f}%")
-            
-        logger.info(f"Answer Accuracy (LLM Evaluated): {agent_metrics['answer_accuracy']:.2f}%")
-        logger.info(f"String-based Metrics:")
-        logger.info(f"  - Accuracy: {agent_metrics['string_accuracy']:.2f}%")
-        logger.info(f"  - Precision: {agent_metrics['string_precision']:.2f}%")
-        logger.info(f"  - Recall: {agent_metrics['string_recall']:.2f}%")
-        
-        logger.info(f"\nDetailed results saved to {output_path}")
+            logger.info(f"  • Top-{k} Coverage: {avg_metrics[f'top{k}_coverage']:.2f}%")
         
         return evaluation_summary 

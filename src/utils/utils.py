@@ -85,11 +85,19 @@ def normalize_answer(text: str) -> str:
     
     return text
 
-def save_results(results: Dict, filename: str):
-    """Save evaluation results to file."""
-    os.makedirs('result', exist_ok=True)
-    with open(f"result/{filename}.json", 'w', encoding='utf-8') as f:
+def save_results(results: Dict, output_file: str, results_dir: str = 'result'):
+    """Save evaluation results to file.
+    
+    Args:
+        results: Dictionary containing results to save
+        output_file: Filename for the results
+        results_dir: Directory to save results in
+    """
+    os.makedirs(results_dir, exist_ok=True)
+    output_path = os.path.join(results_dir, output_file)
+    with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
+    logger.info(f"Results saved to {output_path}")
 
 def evaluate_with_llm(generated: str, gold: str) -> bool:
     """Use LLM to evaluate if the generated answer correctly answers the question."""

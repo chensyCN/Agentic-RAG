@@ -2,19 +2,30 @@
 import argparse
 import json
 import logging
-from typing import Dict, List
+import importlib
+from typing import Dict, List, Type
+
 from src.evaluation.evaluation import RAGEvaluator
-from src.models.agentic_rag import AgenticRAG
+from src.models.base_rag import BaseRAG
 from src.models.vanilla_rag import VanillaRAG
+from src.models.agentic_rag import AgenticRAG
+from src.models.light_agentic_rag import LightAgenticRAG
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Dictionary of available RAG models
+RAG_MODELS = {
+    "vanilla": VanillaRAG,
+    "agentic": AgenticRAG,
+    "light": LightAgenticRAG
+}
+
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Run AgenticRAG evaluation')
+    parser = argparse.ArgumentParser(description='Run RAG models')
     
     # Dataset arguments
     parser.add_argument('--dataset', type=str, default='dataset/hotpotqa.json',
@@ -32,14 +43,18 @@ def parse_arguments():
     parser.add_argument('--eval-top-ks', type=int, nargs='+', default=[5, 10],
                       help='List of k values for top-k accuracy evaluation (default: [5, 10])')
     
-    # Evaluation options
-    parser.add_argument('--output', type=str, default='agent_vs_vanilla_comparison.json',
-                      help='Output file name')
-    parser.add_argument('--mode', type=str, choices=['evaluate', 'agentic', 'vanilla'], 
-                      default='evaluate',
-                      help='Mode of operation: evaluate compares both approaches, other options run a single approach')
+    # Single question (optional)
     parser.add_argument('--question', type=str,
-                      help='Single question to answer (used with --mode=agentic or --mode=vanilla)')
+                      help='Optional: Single question to answer')
+    
+    # RAG model selection
+    parser.add_argument('--model', type=str, choices=list(RAG_MODELS.keys()), 
+                      default='vanilla',
+                      help='Which RAG model to use')
+    
+    # Evaluation options
+    parser.add_argument('--output', type=str, default='evaluation_results.json',
+                      help='Output file name')
     
     return parser.parse_args()
 
@@ -58,49 +73,77 @@ def load_evaluation_data(dataset_path: str, limit: int) -> List[Dict]:
         logger.error(f"Error loading dataset: {e}")
         return []
 
-def run_single_question(question: str, mode: str, corpus_path: str, max_rounds: int, top_k: int):
-    """Run a single question through either AgenticRAG or VanillaRAG."""
-    if mode == "agentic":
-        rag = AgenticRAG(corpus_path)
-        rag.set_max_rounds(max_rounds)
-        rag.set_top_k(top_k)
-        answer, contexts, rounds = rag.answer_question(question)
+def create_rag_model(model_name: str, corpus_path: str, max_rounds: int = 3, top_k: int = 5) -> BaseRAG:
+    """Create and configure a RAG model instance.
+    
+    Args:
+        model_name: Name of the RAG model to create
+        corpus_path: Path to the corpus file
+        max_rounds: Maximum number of rounds for agentic models
+        top_k: Number of contexts to retrieve
         
-        logger.info(f"\nQuestion: {question}")
-        logger.info(f"\nAgenticRAG Answer: {answer}")
+    Returns:
+        A configured RAG model instance
+    """
+    # Check if model exists
+    if model_name not in RAG_MODELS:
+        raise ValueError(f"Unknown RAG model: {model_name}")
+    
+    # Create model instance
+    model_class = RAG_MODELS[model_name]
+    model = model_class(corpus_path)
+    
+    # Configure model
+    model.set_top_k(top_k)
+    
+    # Set max rounds for agentic models
+    if hasattr(model, 'set_max_rounds'):
+        model.set_max_rounds(max_rounds)
+        
+    return model
+
+def run_single_question(model_name: str, question: str, corpus_path: str, max_rounds: int, top_k: int):
+    """Run a single question through the specified RAG model."""
+    # Create and configure the model
+    model = create_rag_model(model_name, corpus_path, max_rounds, top_k)
+    
+    # Get answer
+    logger.info(f"\nQuestion: {question}")
+    logger.info(f"Using {model_name} RAG model")
+    
+    # Handle different return signatures
+    if model_name in ["agentic", "light"]:
+        answer, contexts, rounds = model.answer_question(question)
+        logger.info(f"\nAnswer: {answer}")
         logger.info(f"Retrieved in {rounds} rounds")
-        logger.info("\nContexts used:")
-        for i, ctx in enumerate(contexts):
-            logger.info(f"{i+1}. {ctx[:100]}...")
-            
-    elif mode == "vanilla":
-        rag = VanillaRAG(corpus_path)
-        rag.set_top_k(top_k)
-        answer, contexts = rag.answer_question(question)
-        
-        logger.info(f"\nQuestion: {question}")
-        logger.info(f"\nVanillaRAG Answer: {answer}")
-        logger.info("\nContexts used:")
-        for i, ctx in enumerate(contexts):
-            logger.info(f"{i+1}. {ctx[:100]}...")
+    else:
+        answer, contexts = model.answer_question(question)
+        logger.info(f"\nAnswer: {answer}")
+    
+    # Log contexts
+    logger.info("\nContexts used:")
+    for i, ctx in enumerate(contexts):
+        logger.info(f"{i+1}. {ctx[:100]}...")
+    
+    return answer, contexts
 
 def main():
-    """Main function to run the evaluation."""
+    """Main function to run the RAG model."""
     args = parse_arguments()
     
-    # For single question mode
-    if args.mode in ["agentic", "vanilla"] and args.question:
+    # If a question is provided, run in single question mode
+    if args.question:
         run_single_question(
+            model_name=args.model,
             question=args.question,
-            mode=args.mode,
             corpus_path=args.corpus,
             max_rounds=args.max_rounds,
             top_k=args.top_k
         )
         return
     
-    # For evaluation mode
-    logger.info("Starting AgenticRAG vs VanillaRAG evaluation")
+    # Otherwise run in evaluation mode
+    logger.info(f"Starting evaluation of {args.model} RAG model")
     logger.info(f"Max rounds: {args.max_rounds}, Top-k: {args.top_k}")
     logger.info(f"Evaluating top-k accuracy for k values: {args.eval_top_ks}")
     
@@ -112,8 +155,9 @@ def main():
     
     logger.info(f"Loaded {len(eval_data)} questions for evaluation")
     
-    # Initialize evaluator
+    # Initialize evaluator for single model
     evaluator = RAGEvaluator(
+        model_name=args.model,
         corpus_path=args.corpus,
         max_rounds=args.max_rounds,
         top_k=args.top_k,
@@ -121,7 +165,7 @@ def main():
     )
     
     # Run evaluation
-    evaluation_summary = evaluator.run_evaluation(
+    evaluation_summary = evaluator.run_single_model_evaluation(
         eval_data=eval_data,
         output_file=args.output
     )

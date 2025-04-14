@@ -6,7 +6,8 @@ A modular and extensible implementation of Agentic Retrieval-Augmented Generatio
 
 - **Research Prototype** - A minimal viable implementation for experimentation and academic exploration
 - **Modular Architecture** - Clean, decoupled codebase designed for easy customization and extension
-- **Comparative Evaluation** - Comprehensive evaluation metrics to benchmark RAG approaches
+- **Multiple RAG Models** - Supports multiple RAG implementations with standardized interfaces
+- **Extensible** - Easily add new RAG algorithms to the framework
 
 ![AgenticRAG Architecture](agenticRAG.png)
 
@@ -23,44 +24,53 @@ pip install -r requirements.txt
 
 ## Quick start
 
-### Running Evaluation
+### Running Evaluation on a Dataset
 
-To compare the AgenticRAG and VanillaRAG approaches on a dataset:
+To evaluate a specific RAG model on a dataset:
 
 ```bash
-python main.py --dataset path/to/dataset.json --corpus path/to/corpus.json
+python run.py --model MODEL_NAME --dataset path/to/dataset.json --corpus path/to/corpus.json
 ```
+
+Available models:
+- `vanilla`: Traditional single-step RAG approach
+- `agentic`: Standard AgenticRAG with iterative retrieval
+- `light`: Memory-efficient LightAgenticRAG implementation
 
 Options:
 - `--max-rounds`: Maximum number of agent retrieval rounds (default: 3)
 - `--top-k`: Number of top contexts to retrieve (default: 5)
+- `--eval-top-ks`: List of k values for top-k accuracy evaluation (default: 5 10)
 - `--limit`: Number of questions to evaluate (default: 20)
-- `--output`: Output file name for results (default: agent_vs_vanilla_comparison.json)
+- `--output`: Output file name for results (default: evaluation_results.json)
 
-### Using the Scripts
+### Running a Single Question
 
-For convenience, you can use the provided scripts to run evaluations on all available datasets:
+To run a single question through any RAG model:
 
 ```bash
-# Run evaluations on all datasets
+python run.py --model MODEL_NAME --question "Your question here" --corpus path/to/corpus.json
+```
+
+### Using the Script
+
+For convenience, you can use the provided script to run evaluations with specific RAG models on all datasets:
+
+```bash
+# Run evaluations with vanilla RAG on all datasets
 ./scripts/run.sh
+
+# Run evaluations with LightAgenticRAG on all datasets 
+./scripts/run.sh --model light
 ```
 
-See the [scripts/README.md](scripts/README.md) for more details on available scripts.
 
-### Running a Single Query
 
-To run a single question through the AgenticRAG system:
+## Results
 
-```bash
-python main.py --mode agentic --question "Your question here" --corpus path/to/corpus.json
-```
+![Evaluation Results](results.png)
 
-To run a single question through the VanillaRAG system:
 
-```bash
-python main.py --mode vanilla --question "Your question here" --corpus path/to/corpus.json
-```
 
 ## Components
 
@@ -69,12 +79,31 @@ python main.py --mode vanilla --question "Your question here" --corpus path/to/c
 | **BaseRAG** | • Loading and processing document corpus<br>• Computing and caching document embeddings<br>• Basic retrieval functionality |
 | **VanillaRAG** | • Single retrieval step for relevant contexts<br>• Direct answer generation from retrieved contexts |
 | **AgenticRAG** | • Multiple retrieval rounds with iterative refinement<br>• Reflection on retrieved information to identify missing details<br>• Generation of focused sub-queries for additional retrieval<br>• Final answer generation from comprehensive context |
+| **LightAgenticRAG** | • Memory-efficient implementation of AgenticRAG<br>• Optimized for running on systems with limited resources |
 | **Evaluation** | • Answer accuracy (LLM evaluated)<br>• Retrieval metrics<br>• Performance efficiency<br>• String-based evaluation metrics |
 
-## Example
+## Adding a New RAG Model
+
+To add a new RAG algorithm:
+
+1. Create a new class that extends `BaseRAG` in the `src/models` directory
+2. Implement the required methods (`answer_question` at minimum)
+3. Add your model to the `RAG_MODELS` dictionary in `src/main.py`
 
 ```python
-from agentic_rag import AgenticRAG
+# Example of a new RAG model
+from src.models.base_rag import BaseRAG
+
+class MyNewRAG(BaseRAG):
+    def answer_question(self, question: str):
+        # Implementation here
+        return answer, contexts
+```
+
+## Example Usage
+
+```python
+from src.models.agentic_rag import AgenticRAG
 
 # Initialize RAG system
 rag = AgenticRAG('path/to/corpus.json')
