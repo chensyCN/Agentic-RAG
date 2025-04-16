@@ -13,7 +13,6 @@ A modular and extensible system of Retrieval-Augmented Generation (RAG) - with v
 
 ## Installation and Configuration
 
-- Python 3.8+ required
 - Install dependencies:
 ```bash
 pip install -r requirements.txt
