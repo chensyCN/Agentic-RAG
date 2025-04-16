@@ -114,3 +114,14 @@ print(f"Answer: {answer}")
 print(f"Retrieved in {rounds} rounds")
 ``` 
 
+## Citation
+If you find this work helpful, please cite our recent paper:
+
+```
+@article{zhang2025survey,
+  title={A Survey of Graph Retrieval-Augmented Generation for Customized Large Language Models},
+  author={Zhang, Qinggang and Chen, Shengyuan and Bei, Yuanchen and Yuan, Zheng and Zhou, Huachi and Hong, Zijin and Dong, Junnan and Chen, Hao and Chang, Yi and Huang, Xiao},
+  journal={arXiv preprint arXiv:2501.13958},
+  year={2025}
+}
+```
