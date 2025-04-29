@@ -8,9 +8,7 @@
 </div>
 
 
-A modular and extensible system of Retrieval-Augmented Generation (RAG) - with vanilla RAG and some prototype agentic RAG algorithms.
-
-## Key Features
+A modular and extensible system of Retrieval-Augmented Generation (RAG) - with vanilla RAG and some prototype agentic RAG algorithms. Our key features include:
 
 - **Research Prototype** - A minimal viable implementation for experimentation and academic exploration
 - **Modular Architecture** - Clean, decoupled codebase designed for easy customization and extension
@@ -23,13 +21,10 @@ A modular and extensible system of Retrieval-Augmented Generation (RAG) - with v
 ```bash
 pip install -r requirements.txt
 ```
-- Set your OpenAI API key as an environment variable:
+- Set your OpenAI API key:
 ```bash
-# For Linux/Mac
-export OPENAI_API_KEY=your_api_key_here
-
-# For Windows
-set OPENAI_API_KEY=your_api_key_here
+# Create a .env file in the root directory with:
+OPENAI_API_KEY=your_api_key_here
 ```
 
 - Other configuration options can be modified in `config/config.py`

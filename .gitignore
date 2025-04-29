@@ -1,10 +1,33 @@
+# Python缓存文件
 __pycache__/
+*/__pycache__/
+*/*/__pycache__/
 *.py[cod]
-config/__pycache__/
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# 项目特定目录
 result/
-# Environment variables
+cache/
+
+# 环境变量
 .env
 .env.*
 
-# Sensitive configuration backups
+# 敏感配置备份
 *config_backup*
+
+# 编辑器和IDE文件
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

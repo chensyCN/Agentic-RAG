@@ -2,6 +2,10 @@
 Configuration file for API keys and other settings.
 """
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # OpenAI API Configuration
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
