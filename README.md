@@ -1,5 +1,13 @@
 # Agentic RAG
 
+<div align="center">
+    <a href="http://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-green.svg"/></a>
+    <a href="https://github.com/chensyCN/Agentic-RAG/stargazers"><img src="https://img.shields.io/github/stars/chensyCN/Agentic-RAG"/></a>
+    <a href="https://github.com/chensyCN/Agentic-RAG/network/members"><img src="https://img.shields.io/github/forks/chensyCN/Agentic-RAG"/></a>
+    <a href="https://github.com/chensyCN/Agentic-RAG/commits"><img src="https://img.shields.io/github/last-commit/chensyCN/Agentic-RAG?color=blue"/></a>
+</div>
+
+
 A modular and extensible system of Retrieval-Augmented Generation (RAG) - with vanilla RAG and some prototype agentic RAG algorithms.
 
 ## Key Features
@@ -7,8 +15,6 @@ A modular and extensible system of Retrieval-Augmented Generation (RAG) - with v
 - **Research Prototype** - A minimal viable implementation for experimentation and academic exploration
 - **Modular Architecture** - Clean, decoupled codebase designed for easy customization and extension
 - **Extensible** - Easily add new RAG algorithms to the framework
-
-![AgenticRAG Architecture](agenticRAG.png)
 
 
 ## Installation and Configuration
@@ -61,11 +67,6 @@ For convenience, you can use the provided script to run evaluations with specifi
 ./scripts/run.sh --model light
 ```
 
-
-
-## Results
-
-![Evaluation Results](results.png)
 
 
 
