@@ -6,7 +6,7 @@
       <a href="https://arxiv.org/abs/2508.06105"><img src="https://img.shields.io/badge/paper-available-brightgreen"/></a>
 </div>
 
-LogicRAG enables structured retrieval without building knowledge graphs on corpora. By constructing query logic dependency graphs to guide structured retrieval adaptively, it enables test-time scaling of graphRAG on large/dynamic knowledge bases. This work has been accepted to **AAAI**, with title [You Don't Need Pre-built Graphs for RAG: Retrieval Augmented Generation with Adaptive Reasoning Structures](https://openreview.net/forum?id=ov1bwU35Mf). An updated version also available on [Arxiv](https://arxiv.org/abs/2508.06105).
+LogicRAG enables structured retrieval without building knowledge graphs on corpora. By constructing query logic dependency graphs to guide structured retrieval adaptively, it enables test-time scaling of graphRAG on large/dynamic knowledge bases. This work has been accepted to **AAAI'26**, with title [You Don't Need Pre-built Graphs for RAG: Retrieval Augmented Generation with Adaptive Reasoning Structures](https://openreview.net/forum?id=ov1bwU35Mf). An updated version also available on [Arxiv](https://arxiv.org/abs/2508.06105).
 
 ![System Architecture](figs/framework.png)
 
